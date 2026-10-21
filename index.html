@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Esportpedia – Pertandingan & Tim Esports</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>">
+<link rel="stylesheet" href="style.css"></head><body>
+<header><div class="hi"><span class="logo0" onclick="go('/')">Esport<span>pedia</span></span>
+<button class="ib0" onclick="document.documentElement.dataset.theme=document.documentElement.dataset.theme=='dark'?'light':'dark'" aria-label="Tema">🌓</button>
+<button class="ib0 bg0" id="sb" onclick="tq()" aria-label="Cari">🔍</button>
+<button class="ib0 bg0" onclick="document.getElementById('nav').classList.toggle('open')" aria-label="Menu">☰</button>
+<nav id="nav"></nav><div class="sw" id="sw"><input id="q" type="search" autocomplete="off" placeholder="Cari tim, pemain, pertandingan…" aria-label="Cari"><div id="sr" hidden></div></div></div></header>
+<main id="app"></main>
+<footer>© 2026 Esportpedia · <a onclick="go('/teams')">Tim</a> · <a onclick="go('/t')">Pertandingan</a> <span id="fl">· <a onclick="go('/admin')">Login admin</a></span></footer>
+<div id="bar"></div><div id="toast"></div>
+<div id="fs" hidden><div class="fsh"><b>Full Bracket</b><span style="flex:1"></span><button class="sc" onclick="zm(-.1)">−</button><button class="sc" onclick="zm(.1)">+</button><button class="sc" onclick="fit()">Fit layar</button><button onclick="cfs()">✕ Tutup</button></div><div class="fsc" id="fsc"></div></div>
+<script src="app.js"></script>
+</body></html>
