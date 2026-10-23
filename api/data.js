@@ -1,7 +1,10 @@
 import { readBlob, writeBlob, isAdmin } from '../lib/util.js';
+import { getUser } from '../lib/peserta.js';
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'GET') {
+    // Data hanya untuk yang sudah login (admin atau peserta)
+    if (!(await isAdmin(req)) && !(await getUser(req))) return res.status(401).json({ error: 'Harus login' });
     const t = await readBlob('data.json');
     if (!t) return res.status(404).json({ error: 'belum ada data' });
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
