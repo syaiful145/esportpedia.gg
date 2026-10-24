@@ -36,5 +36,13 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
+  if (req.method === 'DELETE') {
+    if (!row) return res.status(200).json({ ok: true });
+    if (row.live) return res.status(409).json({ error: 'Tim ini sudah disetujui dan tampil di situs. Untuk menghapusnya hubungi admin.' });
+    const d = await sb('tim_pengajuan?id=eq.' + encodeURIComponent(row.id), { method: 'DELETE' });
+    if (!d.ok) return res.status(500).json({ error: 'Gagal menghapus pengajuan' });
+    return res.status(200).json({ ok: true });
+  }
+
   res.status(405).end();
 }
