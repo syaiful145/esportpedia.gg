@@ -236,7 +236,7 @@ function uid(){return Math.random().toString(36).slice(2,8)}
 function brStage(n){return{id:'s'+uid(),n:n||'Babak',mc:6,adv:0,gs:[],ms:[]}}
 function brDef(){return{pts:[12,9,8,7,6,5,4,3,2,1],kp:1,wp:0,stages:[brStage('Penyisihan')]}}
 function gpDef(){return{on:true,pool:[],gs:[{id:'A',n:'Grup A',t:[]},{id:'B',n:'Grup B',t:[]}],adv:2,ms:[]}}
-function brEnsureM(s){let ch=false;if(s.gs.length){s.gs.forEach(g=>{if(!s.ms.some(m=>m.g==g.id)){s.ms.push({id:'m'+uid(),n:'Match 1',g:g.id,d:'',r:{}});ch=true}})}else if(!s.ms.length){s.ms.push({id:'m'+uid(),n:'Match 1',g:'',d:'',r:{}});ch=true}return ch}
+function brEnsureM(s){let ch=false;const pad=(gid,c)=>{for(;c<s.mc;c++){s.ms.push({id:'m'+uid(),n:'Match '+(c+1),g:gid,d:'',r:{}});ch=true}};if(s.gs.length)s.gs.forEach(g=>pad(g.id,s.ms.filter(m=>m.g==g.id).length));else pad('',s.ms.length);return ch}
 function normT(t){
  if(t.mode=='br'&&!t.br)t.br=brDef();
  if(t.br){brClampWins(t.br);const b=t.br;b.pts=Array.isArray(b.pts)&&b.pts.length?b.pts.map(x=>+x||0):[12,9,8,7,6,5,4,3,2,1];b.kp=b.kp===''||b.kp==null||isNaN(+b.kp)?1:+b.kp;b.wp=b.wp===''||b.wp==null||isNaN(+b.wp)?0:Math.max(0,+b.wp);
@@ -381,8 +381,9 @@ function grBR(){const B=X.br,n=B.stages.length;
 ${last?'':s.gs.length?`<p class="mu" style="margin:6px 0"><b>${brElSum(s,pool)}</b></p>`:`<p class="mu" style="margin:6px 0">Tanpa grup: tidak ada eliminasi, semua tim lanjut ke babak berikutnya. Pilih 2/3/4 grup atau + Group kalau mau pakai eliminasi.</p>`}<p class="mu">${k==0?'Peserta babak ini = tim di tab Peserta ('+pool.length+' tim).':'Peserta babak ini = tim yang lolos dari babak sebelumnya ('+pool.length+' tim, tampil otomatis setelah hasil babak sebelumnya diisi).'}</p>${grCtl('b'+k,s,pool,false)}</div>`});
  return h}
 // ---- admin: isi hasil battle royale
-function asPickS(k){const v=vs();v.as=+k;v.ag='all';render()}
-function asPickG(g){vs().ag=g;render()}
+function asPickS(k){const v=vs();v.as=+k;v.ag='all';v.am='';render()}
+function asPickG(g){vs().ag=g;vs().am='';render()}
+function asPickM(id){vs().am=id;render()}
 function brAddM(si,gid){const s=X.br.stages[si];if(s.gs.length&&(!gid||gid=='all'))return toast('Pilih grup dulu');const c=s.ms.filter(m=>!s.gs.length||m.g==gid).length;s.ms.push({id:'m'+uid(),n:'Match '+(c+1),g:s.gs.length?gid:'',d:'',r:{}});save();render()}
 function brDelM(si,mid){if(!confirm('Hapus match ini?'))return;const s=X.br.stages[si];s.ms=s.ms.filter(m=>m.id!=mid);save();render()}
 function brMeta(si,mid,k,v){const m=X.br.stages[si].ms.find(x=>x.id==mid);if(m){m[k]=String(v).trim()||m[k];save();render()}}
@@ -392,8 +393,9 @@ function brScoreUI(){const B=X.br,v=vs(),n=B.stages.length;if(v.as>=n)v.as=0;con
  if(!pool.length)return h+'<p class="mu">Belum ada tim di babak ini. '+(si==0?'Pilih tim di tab Peserta.':'Isi hasil babak sebelumnya dulu; tim yang lolos tampil otomatis.')+'</p></div>';
  if(s.gs.length)h+=segS([['all','Pilih grup…'],...s.gs.map(g=>[g.id,g.n])],v.ag,'asPickG');
  if(s.gs.length&&v.ag=='all')return h+'<p class="mu">Pilih grup di atas untuk mengisi hasil. Atur grup di tab Pertandingan.</p></div>';
- const teams=s.gs.length?brGroupTeams(si,v.ag):pool,m=s.ms.find(x=>!s.gs.length||x.g==v.ag),pt=B.pts;
+ const teams=s.gs.length?brGroupTeams(si,v.ag):pool,ml=s.ms.filter(x=>!s.gs.length||x.g==v.ag),m=ml.find(x=>x.id==v.am)||ml[0],pt=B.pts;
  if(!m)return h+'</div>';
+ if(ml.length>1)h+=segS(ml.map(x=>[x.id,x.n]),m.id,'asPickM');
  const st={};brStand(si,s.gs.length?v.ag:'').forEach(r=>{st[r.i]=r});
  const ps=teams.map(i=>brE(m.r[i]).p).filter(x=>x>0),dup=ps.some((x,j)=>ps.indexOf(x)!=j),done=brPlayed(s,m,pool),last=si==n-1;
  h+=`<div class="row" style="border:0;padding:0 0 8px;flex-wrap:wrap"><label class="mu" style="white-space:nowrap">Jumlah pertandingan${s.gs.length?' per grup':''} <input type="number" min="1" max="99" value="${s.mc}" onchange="brStg(${si},'mc',this.value)" style="width:80px"></label><span class="mu" style="flex:1;min-width:200px">Menang terisi <b>${brGrpWins(si,s.gs.length?v.ag:'')}</b> dari ${s.mc} pertandingan${s.gs.length?' di grup ini':''}. Pakai tombol − / + untuk <b>posisi</b>, <b>menang</b> (dibatasi sisa pertandingan) dan <b>kill</b>. Poin: ${B.wp} per menang, ${B.kp} per kill${pt.some(x=>x>0)?', posisi '+pt.slice(0,5).join(', ')+(pt.length>5?', …':''):''}. Total terhitung otomatis.</span><input type="text" readonly class="dpi" onclick="dpo(this)" value="${esc(m.d)}" placeholder="Date" onchange="brSet_d(${si},'${m.id}',this.value)" style="width:110px" aria-label="Tanggal"></div>${dup?'<div class="note">Ada posisi yang sama dua kali.</div>':''}${done&&brGrpWins(si,s.gs.length?v.ag:'')!=s.mc?'<div class="note">Total menang '+brGrpWins(si,s.gs.length?v.ag:'')+' dari '+s.mc+' pertandingan. Pastikan sesuai.</div>':''}<div class="wrap"><table><tr><th>Tim</th><th>Posisi</th><th>Menang</th><th>Kill</th><th>Poin</th><th>Total</th><th>Hasil</th></tr>${teams.map(i=>{const e=m.r[i]||['','',''],q=brE(m.r[i]),pp=q.has?brPP(q):'',tot=q.has?pp+q.k*B.kp:'',r=st[i],hs=[done&&r&&r.rk==1?bd('Menang','ok'):'',done&&!last&&brOn(s)&&r?(r.rk<=brKeepN(s,r.gn)?bd('Lolos','ok'):bd('Eliminasi','live')):''].filter(Boolean).join(' ');return`<tr><td>${lg(i,20)} ${esc(S.teams[i].n)}</td><td>${brStpH(si,m.id,i,0,q.p||'–',false)}</td><td>${brStpH(si,m.id,i,2,q.w,brGrpWins(si,s.gs.length?v.ag:'')-q.w>=s.mc)}</td><td>${brStpH(si,m.id,i,1,q.k,false)}</td><td>${pp}</td><td><b>${tot}</b></td><td>${hs}</td></tr>`}).join('')}</table></div></div>`;
