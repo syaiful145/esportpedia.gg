@@ -236,7 +236,7 @@ function uid(){return Math.random().toString(36).slice(2,8)}
 function brStage(n){return{id:'s'+uid(),n:n||'Babak',mc:6,adv:0,gs:[],ms:[]}}
 function brDef(){return{pts:[12,9,8,7,6,5,4,3,2,1],kp:1,wp:0,stages:[brStage('Penyisihan')]}}
 function gpDef(){return{on:true,pool:[],gs:[{id:'A',n:'Grup A',t:[]},{id:'B',n:'Grup B',t:[]}],adv:2,ms:[]}}
-function brEnsureM(s){let ch=false;if(s.gs.length){s.gs.forEach(g=>{if(!s.ms.some(m=>m.g==g.id)){s.ms.push({id:'m'+uid(),n:'Match 1',g:g.id,d:'',r:{}});ch=true}})}else if(!s.ms.length){s.ms.push({id:'m'+uid(),n:'Match 1',g:'',d:'',r:{}});ch=true}return ch}
+function brEnsureM(s){let ch=false;const mc=Math.max(1,+s.mc||1);const gl=s.gs.length?s.gs.map(g=>g.id):[''];gl.forEach(gid=>{const have=s.ms.filter(m=>s.gs.length?m.g==gid:true).length;for(let c=have;c<mc;c++){s.ms.push({id:'m'+uid(),n:'Match '+(c+1),g:gid,d:'',r:{}});ch=true}});return ch}
 function normT(t){
  if(t.mode=='br'&&!t.br)t.br=brDef();
  if(t.br){brClampWins(t.br);const b=t.br;b.pts=Array.isArray(b.pts)&&b.pts.length?b.pts.map(x=>+x||0):[12,9,8,7,6,5,4,3,2,1];b.kp=b.kp===''||b.kp==null||isNaN(+b.kp)?1:+b.kp;b.wp=b.wp===''||b.wp==null||isNaN(+b.wp)?0:Math.max(0,+b.wp);
