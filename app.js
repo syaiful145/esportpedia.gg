@@ -83,7 +83,7 @@ function res(id){const m=M.find(k=>k[0]==id),a=part(m[1]),b=part(m[2]),s=X.sc[id
 function norm(){M.forEach(m=>{const x=res(m[0]),k=x.a+'-'+x.b;if(X.sig[m[0]]!=null&&X.sig[m[0]]!=k)delete X.sc[m[0]];X.sig[m[0]]=k})}norm();
 const lg=(i,z=28)=>{const t=i==null?null:S.teams[i];if(!t)return`<span class="lg" style="width:${z}px;height:${z}px;background:var(--bd)"></span>`;const ol_=t.logo||((S.orgs.find(o=>o.id==t.o)||{}).logo);return ol_?`<span class="lg lgi" style="width:${z}px;height:${z}px"><img src="${ol_}" alt=""></span>`:`<span class="lg" style="width:${z}px;height:${z}px;font-size:${z/2.8}px;background:${COL[i%8]}">${esc(t.t)}</span>`};
 const tm=(i,z)=>i==null||!S.teams[i]?'<span class="mu">TBD</span>':`<a class="tm" onclick="go('/team/${i}')">${lg(i,z)}${esc(S.teams[i].n)}</a>`;
-const tierB=t=>t?`<span class="badge tier t${esc(t)}">${esc(t)}-Tier</span>`:'',bd=(t,c)=>`<span class="badge ${c}" style="display:flex;align-items:center;justify-content:center;text-align:center">${t}</span>`,pc=p=>p=='1st'?'g':p=='2nd'?'s':p=='3rd'?'b':'';
+const tierB=t=>t?`<span class="badge tier t${esc(t)}">${esc(t)}-Tier</span>`:'',bd=(t,c)=>`<span class="badge ${c}" style="display:flex;align-items:center;justify-content:center;text-align:center;padding:5px 14px;line-height:1.3;min-height:26px">${t}</span>`,pc=p=>p=='1st'?'g':p=='2nd'?'s':p=='3rd'?'b':'';
 const stt=x=>x.w!=null?['Selesai','ok']:x.a!=null&&x.b!=null?['Akan datang','up']:['TBD',''],dtf=m=>X.dt[m[0]]||m[4];
 const champ=()=>X.cm!=null?X.cm:X.mode=='br'?brChamp():X.fm=='rr'?rrChamp():res('g1').w,sts=()=>{const s=X.st;return s&&s!='auto'?s:champ()!=null?'Selesai':'Berlangsung'},stc=s=>s=='Selesai'?'ok':s=='Berlangsung'?'live':'up';
 const places=()=>X.mode=='br'?brPlaces():X.fm=='rr'?rrPlaces():(X.fm=='se'||!stdSize(X.size))?gplaces():X.size==16?[['1st',[res('g1').w]],['2nd',[loser('g1')]],['3rd',[loser('l14')]],['4th',[loser('l13')]],['5th–6th',[loser('l11'),loser('l12')]],['7th–8th',[loser('l9'),loser('l10')]],['9th–12th',[5,6,7,8].map(n=>loser('l'+n))],['13th–16th',[1,2,3,4].map(n=>loser('l'+n))]]:X.size==4?[['1st',[res('g1').w]],['2nd',[loser('g1')]],['3rd',[loser('l6')]],['4th',[loser('l1')]]]:[['1st',[res('g1').w]],['2nd',[loser('g1')]],['3rd',[loser('l6')]],['4th',[loser('l5')]],['5th–6th',[loser('l3'),loser('l4')]],['7th–8th',[loser('l1'),loser('l2')]]];
@@ -228,7 +228,7 @@ function gpDef(){return{on:true,pool:[],gs:[{id:'A',n:'Grup A',t:[]},{id:'B',n:'
 function brEnsureM(s){let ch=false;if(s.gs.length){s.gs.forEach(g=>{if(!s.ms.some(m=>m.g==g.id)){s.ms.push({id:'m'+uid(),n:'Match 1',g:g.id,d:'',r:{}});ch=true}})}else if(!s.ms.length){s.ms.push({id:'m'+uid(),n:'Match 1',g:'',d:'',r:{}});ch=true}return ch}
 function normT(t){
  if(t.mode=='br'&&!t.br)t.br=brDef();
- if(t.br){const b=t.br;b.pts=Array.isArray(b.pts)&&b.pts.length?b.pts.map(x=>+x||0):[12,9,8,7,6,5,4,3,2,1];b.kp=b.kp===''||b.kp==null||isNaN(+b.kp)?1:+b.kp;b.wp=b.wp===''||b.wp==null||isNaN(+b.wp)?0:Math.max(0,+b.wp);
+ if(t.br){brClampWins(t.br);const b=t.br;b.pts=Array.isArray(b.pts)&&b.pts.length?b.pts.map(x=>+x||0):[12,9,8,7,6,5,4,3,2,1];b.kp=b.kp===''||b.kp==null||isNaN(+b.kp)?1:+b.kp;b.wp=b.wp===''||b.wp==null||isNaN(+b.wp)?0:Math.max(0,+b.wp);
   b.stages=Array.isArray(b.stages)&&b.stages.length?b.stages:[brStage('Penyisihan')];
   b.stages.forEach(s=>{s.id=s.id||'s'+uid();s.n=s.n||'Babak';s.mc=Math.max(1,Math.round(+s.mc)||1);s.adv=Math.max(0,+s.adv||0);s.el=s.el==null||s.el===''||isNaN(+s.el)?null:Math.max(0,Math.round(+s.el));s.gs=Array.isArray(s.gs)?s.gs:[];s.gs.forEach(g=>{g.t=Array.isArray(g.t)?g.t:[]});s.ms=Array.isArray(s.ms)?s.ms:[];s.ms.forEach(m=>{m.r=m.r&&typeof m.r=='object'?m.r:{};m.g=m.g||''});brEnsureM(s)})}
  if(t.gp){const g=t.gp;g.pool=Array.isArray(g.pool)?g.pool:[];g.gs=Array.isArray(g.gs)?g.gs:[];g.gs.forEach(x=>{x.t=Array.isArray(x.t)?x.t:[]});g.ms=Array.isArray(g.ms)?g.ms:[];g.adv=Math.max(1,+g.adv||2);g.ms.forEach(m=>{m.s=Array.isArray(m.s)?m.s:['','']})}}
@@ -278,6 +278,7 @@ function gpScoreUI(){const G=X.gp;if(!G.ms.length)return'<div class="card"><p cl
 // ---- battle royale
 function brE(e){const f=x=>x===''||x==null;return{has:!!e&&(!f(e[0])||!f(e[1])||!f(e[2])),p:!e||f(e[0])?0:+e[0]||0,k:!e||f(e[1])?0:+e[1]||0,w:!e||f(e[2])?0:+e[2]||0}}
 function brPP(q){return(q.p?X.br.pts[q.p-1]||0:0)+q.w*X.br.wp}
+function brClampWins(B){B.stages.forEach(s=>{const gl=s.gs.length?s.gs:[null];gl.forEach(g=>{let left=Math.max(0,+s.mc||0);s.ms.forEach(m=>{if(g&&m.g!=g.id)return;Object.keys(m.r||{}).forEach(k=>{const e=m.r[k];if(!Array.isArray(e))return;const w=+e[2]||0,use=Math.min(w,left);left-=use;if(use!==w)e[2]=use?use:''})})})})}
 function brWins(m,si){const s=X.br.stages[si],t=s.gs.length?brGroupTeams(si,m.g):brPool(si);return t.reduce((n,i)=>n+brE(m.r[i]).w,0)}
 // total menang SEMUA match dalam satu grup (atau seluruh babak jika tanpa grup) — harus sama dengan jumlah pertandingan
 function brGrpWins(si,gid){const s=X.br.stages[si],t=s.gs.length?brGroupTeams(si,gid):brPool(si);let n=0;s.ms.forEach(m=>{if(s.gs.length&&m.g!=gid)return;t.forEach(i=>{n+=brE(m.r[i]).w})});return n}
@@ -621,3 +622,31 @@ function langBtn(){
 }
 const _renderBase=render;
 render=function(){_renderBase();applyLang(document.body);langBtn()};
+
+/* ===== Tampilan responsif ===== */
+(function(){const c=document.createElement('style');c.id='resp-css';c.textContent=`
+html{-webkit-text-size-adjust:100%}
+.wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+img{max-width:100%;height:auto}
+.layout{max-width:1200px;margin:0 auto}
+.row{flex-wrap:wrap}
+@media (max-width:640px){
+ body{font-size:14px}
+ h1{font-size:22px;line-height:1.2}
+ h2{font-size:18px}
+ table{font-size:12px}
+ th,td{padding:5px 6px}
+ button,.sc{padding:6px 10px}
+ .grid{grid-template-columns:1fr 1fr!important}
+ .ibx dl{grid-template-columns:1fr!important}
+ .stat b{font-size:18px}
+}
+@media (max-width:380px){
+ .grid{grid-template-columns:1fr!important}
+ table{font-size:11px}
+}
+@media (min-width:1100px){
+ body{font-size:15px}
+ .layout{max-width:1280px}
+}
+`;document.head.appendChild(c)})();
