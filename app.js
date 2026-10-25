@@ -152,7 +152,18 @@ async function adAdd(){const u=document.getElementById('adu').value.trim().toLow
 async function adReset(id){const e=document.getElementById('ar_'+id),p=e.value;if(p.length<6)return toast('Password baru minimal 6 karakter');try{const r=await api('/api/admin-akun',{method:'PUT',body:JSON.stringify({id,password:p})});const j=await r.json().catch(()=>({}));if(r.ok){if(j.self){logout();toast('Password diubah, login lagi pakai password baru')}else{e.value='';toast('Password direset: '+p)}}else toast(j.error||'Gagal reset')}catch(e2){toast('Gagal terhubung ke server')}}
 async function adDel(id,n){if(!confirm('Hapus admin '+n+'?'))return;try{const r=await api('/api/admin-akun?id='+encodeURIComponent(id),{method:'DELETE'});const j=await r.json().catch(()=>({}));if(r.ok){AL=null;render();toast('Admin dihapus')}else toast(j.error||'Gagal menghapus')}catch(e){toast('Gagal terhubung ke server')}}
 // ---- muat data (hanya bila sudah login)
-async function loadData(){const t=ADMIN&&TOK?TOK:PTK;if(!t)return false;try{const r=await fetch('/api/data',{cache:'no-store',headers:{Authorization:'Bearer '+t}});if(r.status==401)return'x';if(r.ok){ORIG=await r.text();S=migrate(JSON.parse(ORIG));normAll();return true}}catch(e){}return false}
+let DETAG=null,DPEND=null;
+async function loadData(){const t=ADMIN&&TOK?TOK:PTK;if(!t)return false;try{const r=await fetch('/api/data',{cache:'no-store',headers:{Authorization:'Bearer '+t}});if(r.status==401)return'x';if(r.ok){ORIG=await r.text();DETAG=r.headers.get('ETag');S=migrate(JSON.parse(ORIG));normAll();return true}}catch(e){}return false}
+/* ===== Realtime: cek data baru tiap 20 detik (pakai ETag, 304 kalau belum berubah) ===== */
+function applyServerData(text,etag){ORIG=text;DETAG=etag;S=migrate(JSON.parse(text));normAll();DPEND=null;render()}
+async function dataPoll(){const t=ADMIN&&TOK?TOK:PTK;if(!t||document.hidden)return;try{const r=await fetch('/api/data',{cache:'no-store',headers:{Authorization:'Bearer '+t,'If-None-Match':DETAG||''}});if(r.status==304||!r.ok)return;const text=await r.text();const etag=r.headers.get('ETag');if(text===ORIG){DETAG=etag;return}
+const busy=document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+if(ADMIN&&DIRTY){if(DPEND?.etag!==etag){DPEND={text,etag};toast('Ada perubahan baru dari orang lain. Simpan dulu atau muat ulang halaman.')}return}
+if(busy){DPEND={text,etag};return}
+applyServerData(text,etag)}catch(e){}}
+setInterval(dataPoll,20000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)dataPoll()});
+
 function dropSess(){ADMIN=false;TOK='';VW='';PTK='';try{['esptok','espadmin','espviewer','esppt'].forEach(k=>sessionStorage.removeItem(k))}catch(e){}}
 // ---- tim peserta (diajukan peserta, disetujui admin)
 let TM={loaded:false,loading:false,row:null,f:null,busy:false};
@@ -678,3 +689,11 @@ img{max-width:100%;height:auto}
 *{box-sizing:border-box}
  input,select,textarea{max-width:100%}
 `;document.head.appendChild(c)})();
+
+/* ===== Notifikasi pengajuan tim untuk admin (cek otomatis tiap 30 detik) ===== */
+let PJSNAP='',PJSCNT=0;
+async function pjPoll(){if(!ADMIN)return;try{const r=await api('/api/tim-admin');if(!r.ok)return;const j=await r.json().catch(()=>({}));const rows=j.rows||[];const snap=rows.map(x=>x.id+x.status+x.updated_at).join('|');const pend=rows.filter(x=>x.status=='pending').length;
+ if(PJSNAP&&snap!==PJSNAP){const baru=pend-PJSCNT;if(baru>0)toast('Ada '+baru+' pengajuan/perubahan tim baru');PJ=rows;const busy=document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(!busy)render()}
+ else{PJ=rows}
+ PJSNAP=snap;PJSCNT=pend}catch(e){}}
+setInterval(pjPoll,30000);
