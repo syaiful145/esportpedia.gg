@@ -696,8 +696,9 @@ img{max-width:100%;height:auto}
 }
 
 @media (max-width:820px){
- .layout{display:block!important}
+ .layout{display:flex!important;flex-direction:column}
  .layout>*{width:100%}
+ .layout>.ibx{order:-1;margin-bottom:12px}
  .card{padding:12px}
  .tile{padding:10px}
  .row{gap:6px}
