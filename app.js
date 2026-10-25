@@ -186,8 +186,8 @@ function timSaya(){if(!VW||!PTK)return'<div class="card">Masuk sebagai peserta d
 <label class="f">Deskripsi singkat</label><textarea rows="3" maxlength="300" onchange="TM.f.org.desc=this.value" style="${st}">${esc(f.org.desc)}</textarea>
 <div class="row" style="border:0;padding:0 0 8px">${f.org.logo?`<span class="lg lgi" style="width:56px;height:56px"><img src="${f.org.logo}" alt="Logo"></span>`:'<span class="mu">Belum ada logo</span>'}<label class="btn">${f.org.logo?'Ganti logo':'Upload logo'}<input type="file" accept="image/*" hidden onchange="tmLogo(this)"></label>${f.org.logo?'<button class="sc" onclick="TM.f.org.logo=\'\';render()">Hapus logo</button>':''}</div>
 <h3>Cabang</h3>${dv}${f.divs.length<6?'<p><button class="sc" onclick="TM.f.divs.push({did:tmId(),n:\'\',g:\'\',p:\'\'});render()">+ Tambah divisi</button></p>':''}
-<p><button onclick="tmSubmit()"${TM.busy?' disabled':''}>Ajukan ke admin</button> ${row&&row.live?'':`<button class="dn" onclick="tmDel()">${row?'Hapus pengajuan':'Batal'}</button>`}</p></div>`}
-async function tmDel(){if(!TM.row){TM.f=null;return render()}if(!confirm('Hapus pengajuan tim ini? Data yang sudah kamu isi akan hilang.'))return;
+<p><button onclick="tmSubmit()"${TM.busy?' disabled':''}>Ajukan ke admin</button> ${`<button class="dn" onclick="tmDel()">${row?'Hapus pengajuan':'Batal'}</button>`}</p></div>`}
+async function tmDel(){if(!TM.row){TM.f=null;return render()}if(!confirm(TM.row&&TM.row.live?'Hapus pengajuan tim ini? Tim yang sudah tampil di situs akan dihapus dari My Team, dan admin perlu menghapusnya juga dari situs.':'Hapus pengajuan tim ini? Data yang sudah kamu isi akan hilang.'))return;
  try{const r=await fetch('/api/tim-saya',{method:'DELETE',headers:{Authorization:'Bearer '+PTK}});const j=await r.json().catch(()=>({}));if(r.ok){TM.row=null;TM.f=null;TM.loaded=false;toast('Pengajuan dihapus');render()}else if(r.status==401){toast('Sesi habis, login lagi');vout()}else toast(j.error||'Gagal menghapus')}catch(e){toast('Gagal terhubung ke server')}}
 function tmLogo(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const Q=256,c=document.createElement('canvas');c.width=c.height=Q;const W=im.naturalWidth||Q,H=im.naturalHeight||Q,k=Math.min(Q/W,Q/H),w=W*k,h=H*k;c.getContext('2d').drawImage(im,(Q-w)/2,(Q-h)/2,w,h);let u=c.toDataURL('image/png');if(u.length>190000)u=c.toDataURL('image/webp',.9);if(u.length>190000)u=c.toDataURL('image/jpeg',.8);if(u.length>190000)return toast('Logo terlalu besar, pakai gambar lain');TM.f.org.logo=u;render()};im.onerror=()=>toast('File bukan gambar');im.src=r.result};r.readAsDataURL(f)}
 async function tmSubmit(){const f=TM.f;if(!f)return;if((f.org.n||'').trim().length<2)return toast('Isi nama tim dulu');
@@ -223,7 +223,7 @@ async function pjDel(id){const row=PJ&&PJ.find(x=>x.id==id);if(!row)return;const
  if(rm){tms.map(x=>x[1]).sort((a,b)=>b-a).forEach(i=>delTeam(i));if(!S.teams.some(t=>t.o==row.org_id))S.orgs=S.orgs.filter(o=>o.id!=row.org_id);save()}
  PJ=null;render();toast('Pengajuan dihapus'+(rm?' dan tim dihapus dari situs':''))}
 async function pjApprove(id){const row=PJ&&PJ.find(x=>x.id==id);if(!row)return;const p=row.payload,oid='o_p'+String(row.id).replace(/-/g,'').slice(0,8);
- try{const r=await api('/api/tim-admin',{method:'PUT',body:JSON.stringify({id,status:'approved',org_id:oid,v:row.updated_at})});const j=await r.json().catch(()=>({}));if(!r.ok){toast(j.error||'Gagal menyetujui');if(r.status==409){PJ=null;render()}return}}catch(e){return toast('Gagal terhubung ke server')}
+ try{const r=await api('/api/tim-admin',{method:'PUT',body:JSON.stringify({id,status:'approved',org_id:oid,v:row.updated_at})});const j=await r.json().catch(()=>({}));if(!r.ok){toast(r.status==404?'Pengajuan sudah dihapus peserta':(j.error||'Gagal menyetujui'));if(r.status==409||r.status==404){PJ=null;render()}return}}catch(e){return toast('Gagal terhubung ke server')}
  let o=S.orgs.find(x=>x.id==oid);if(!o){o={id:oid};S.orgs.push(o)}
  o.n=p.org.n;o.t=p.org.t;o.c=p.org.c;o.desc=p.org.desc||'';if(p.org.logo)o.logo=p.org.logo;else delete o.logo;
  p.divs.forEach(d=>{const pk=row.owner+':'+d.did,roles=rtpl(d.g),len=Math.max(roles.length,d.r.length),r=[];for(let k=0;k<len;k++){const q=d.r[k];r.push([q?q[0]:'TBD',(q&&q[1])||roles[k]||'Pemain'])}
@@ -519,7 +519,25 @@ function edo(k,key,v){v=v.trim();if(key=='n'&&!v)return render();S.orgs[k][key]=
 function delOrg(k){const id=S.orgs[k].id;S.teams.forEach(t=>{if(t.o==id)t.o=''});S.orgs.splice(k,1);DELO=-1;save();render()}
 function ed(i,k,v){if(v.trim())S.teams[i][k]=v.trim();save();render()}
 function setParent(i,v){const t=S.teams[i];if(!t)return;if(v===''||v==null){t.p=null}else{const k=+v;if(k==i)return;t.p=k;const pr=S.teams[k];if(pr&&pr.o)t.o=pr.o}save();render()}
-function delTeam(i){S.teams.splice(i,1);S.teams.forEach(x=>{if(x.p!=null){if(x.p==i)x.p=null;else if(x.p>i)x.p=x.p-1}});S.tours.forEach(t=>{t.slots=t.slots.map(s=>s==null?null:s==i?null:s>i?s-1:s);const c=t.cm;if(c!=null)t.cm=c==i?null:c>i?c-1:c});S.tours.forEach(t=>brRemap(t,i));DEL=-1;normAll();save();render()}
+/* Hapus tim dari admin: kalau tim berasal dari pengajuan peserta, pengajuannya ikut dihapus
+   supaya peserta tidak melihat tim itu lagi di My Team (dan tidak spam notifikasi ke admin). */
+async function delTeam(i){
+  const t=S.teams[i];
+  if(!t||!t.pk){delTeamRaw(i);return}
+  const ow=String(t.pk).split(':')[0];
+  let rows=PJ;
+  if(!rows){try{const r=await api('/api/tim-admin');const j=await r.json().catch(()=>({}));rows=j.rows||[]}catch(e){rows=[]}}
+  const row=rows.find(x=>x.owner==ow);
+  if(row){
+    if(!confirm('Tim ini berasal dari pengajuan peserta. Hapus juga pengajuannya? Semua divisi dari pengajuan ini ikut dihapus dari situs dan dari My Team peserta.'))return;
+    try{const r=await api('/api/tim-admin?id='+encodeURIComponent(row.id),{method:'DELETE'});if(!r.ok){toast('Gagal menghapus pengajuan');return}}catch(e){toast('Gagal terhubung ke server');return}
+    PJ=null;
+    for(let k=S.teams.length-1;k>=0;k--){if(S.teams[k].pk&&String(S.teams[k].pk).split(':')[0]==ow)delTeamRaw(k)}
+    return;
+  }
+  delTeamRaw(i);
+}
+function delTeamRaw(i){S.teams.splice(i,1);S.teams.forEach(x=>{if(x.p!=null){if(x.p==i)x.p=null;else if(x.p>i)x.p=x.p-1}});S.tours.forEach(t=>{t.slots=t.slots.map(s=>s==null?null:s==i?null:s>i?s-1:s);const c=t.cm;if(c!=null)t.cm=c==i?null:c>i?c-1:c});S.tours.forEach(t=>brRemap(t,i));DEL=-1;normAll();save();render()}
 function up(i,el,kd){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
  const W=im.naturalWidth||512,H=im.naturalHeight||512,k=Math.min(1,512/Math.max(W,H)),w=Math.round(W*k),h=Math.round(H*k),c0=document.createElement('canvas');c0.width=w;c0.height=h;const g=c0.getContext('2d');g.drawImage(im,0,0,w,h);
  let x0=0,y0=0,x1=w,y1=h;try{const d=g.getImageData(0,0,w,h).data;let a=w,b=h,c=-1,e=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(d[(y*w+x)*4+3]>10){if(x<a)a=x;if(x>c)c=x;if(y<b)b=y;if(y>e)e=y}if(c>=0){x0=a;y0=b;x1=c+1;y1=e+1}}catch(err){}
@@ -697,3 +715,9 @@ async function pjPoll(){if(!ADMIN)return;try{const r=await api('/api/tim-admin')
  else{PJ=rows}
  PJSNAP=snap;PJSCNT=pend}catch(e){}}
 setInterval(pjPoll,30000);
+/* Peserta: My Team ikut berubah otomatis kalau admin menghapus/menyetujui pengajuan (cek tiap 20 detik) */
+let TMSNAP='';
+async function tmPoll(){if(!PTK||!VW||!TM.loaded||TM.loading||document.hidden)return;if(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+ try{const r=await fetch('/api/tim-saya',{cache:'no-store',headers:{Authorization:'Bearer '+PTK}});if(!r.ok)return;const j=await r.json().catch(()=>({}));const row=j.row||null;const snap=row?(row.id+'|'+row.status+'|'+row.updated_at+'|'+(row.live?'L':'')):'none';
+  if(TMSNAP&&snap!==TMSNAP){TMSNAP=snap;loadTM();return}TMSNAP=snap}catch(e){}}
+setInterval(tmPoll,20000);
