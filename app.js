@@ -257,7 +257,7 @@ function gpOn(){return X.mode!='br'&&!!X.gp&&!!X.gp.on}
 // ---- semua pertandingan "lawan satu lawan": bracket + liga grup
 function gpMs(){return X.gp.ms.map(m=>{const a=m.a,b=m.b,s=m.s||['',''];let w=null;if(a!=null&&b!=null&&s[0]!==''&&s[1]!==''&&+s[0]!=+s[1])w=+s[0]>+s[1]?a:b;const g=X.gp.gs.find(z=>z.id==m.g);return[['gp_'+m.id,a,b,g?g.n:'Grup',m.d||''],{a,b,s,w,m:null}]})}
 function XM(){const L=M.map(m=>[m,res(m[0])]);if(gpOn())gpMs().forEach(a=>L.push(a));return L}
-function mcount(){return X.mode=='br'?X.br.stages.reduce((n,s)=>n+(s.mc||1)*Math.max(1,s.gs.length),0):M.length+(gpOn()?X.gp.ms.length:0)}
+function mcount(){if(X.mode=='br')return X.br.stages.reduce((n,s)=>n+s.ms.filter(m=>Object.values(m.r||{}).some(e=>brE(e).has)).length,0);return XM().filter(a=>a[1].w!=null).length+(gpOn()?X.gp.ms.filter(m=>{const z=m.s||[];return z[0]!==''&&z[0]!=null&&z[1]!==''&&z[1]!=null}).length:0)}
 function gpHas(i){return gpOn()&&(X.gp.pool.includes(i)||X.gp.gs.some(g=>g.t.includes(i)))}
 function inT(i){return X.slots.slice(0,X.size).includes(i)||gpHas(i)}
 function gpDone(){return gpOn()&&X.gp.ms.length>0&&X.gp.ms.every(m=>{const s=m.s||[];return s[0]!==''&&s[1]!==''&&+s[0]!=+s[1]})}
@@ -438,10 +438,10 @@ function render(){const h=location.hash.slice(1)||'/',gt=gated()&&h!='/admin',N=
  drawBar()}
 const tmo=(i,z)=>{const t=S.teams[i];if(i==null||!t)return tm(i,z);const k=orgK(t.o);if(k<0)return tm(i,z);const o=S.orgs[k];return`<a class="tm" onclick="go('/org/${encodeURIComponent(o.id)}')">${olg(k,z)}${esc(o.n)}</a> <span class="mu">(${esc(gname(t.g)||t.n)})</span>`};
 function home(){const fk=(()=>{const f=S.tours[S.feat||0];if(f&&inGM(f.g))return S.feat||0;const k=S.tours.findIndex(t=>inGM(t.g));return k>=0?k:S.feat||0})();setCur(fk);const c=sts(),all=XM(),done=all.filter(a=>a[1].w!=null).slice(-5).reverse();
- return`<div class="hero">${bd('● '+c.toUpperCase(),stc(c))}<h1 style="margin-top:8px">${esc(X.n)}</h1><p>${esc(cname(X.loc)||X.loc)} ${dFmt(X.date)?' · '+esc(dFmt(X.date)):''} · Total hadiah ${fmt(X.prize)}. ${esc(X.desc)}</p><a class="btn" onclick="go('/t/'+CUR)">Lihat pertandingan</a></div>
+ return`<div class="hero" style="${c=='Berlangsung'?'display:none':''}">${bd('● '+c.toUpperCase(),stc(c))}<h1 style="margin-top:8px">${esc(X.n)}</h1><p>${esc(cname(X.loc)||X.loc)} ${dFmt(X.date)?' · '+esc(dFmt(X.date)):''} · Total hadiah ${fmt(X.prize)}. ${esc(X.desc)}</p><a class="btn" onclick="go('/t/'+CUR)">Lihat pertandingan</a></div>
 <div class="stats"><div class="stat"><b>${X.size}</b><span>Tim bertanding</span></div><div class="stat"><b>${new Set(TI().map(([t,i])=>orgK(t.o)>=0?'o'+t.o:'t'+i)).size}</b><span>Tim terdaftar</span></div><div class="stat"><b>${mcount()}</b><span>Pertandingan</span></div><div class="stat"><b>${new Set(TI().map(([t])=>t.c)).size}</b><span>Negara</span></div></div>
 </div>
-<h2>Tim</h2>${tgrid()}
+<h2>Pertandingan</h2>${tcards(4)}<h2>Tim</h2>${tgrid()}
 <h2>Riwayat Pertandingan</h2><div class="wrap card" style="padding:0"><table><tr><th>Tahun</th><th>Pertandingan</th><th>Juara</th><th>Hadiah</th></tr>${S.hist.map(h=>{const i=S.teams.findIndex(t=>t.n==h[2]);return`<tr><td>${esc(h[0])}</td><td>${esc(h[1])}</td><td>${i>=0?tm(i,18):esc(h[2])}</td><td>${fmt(h[3])}</td></tr>`}).join('')}</table></div>`}
 function tour(){const c=champ(),t=X,s=sts();let b='';const btn='<button onclick="ofs()">⛶ Tampilkan full bracket</button>';
  if(X.mode=='br'&&(TAB=='bk'||TAB=='mt'))TAB='br';if(X.fm=='rr'&&(TAB=='bk'||TAB=='mt'))TAB='gp';if(X.mode!='br'&&TAB=='br')TAB='ov';if(TAB=='gp'&&!gpOn())TAB='ov';if(TAB=='ov')b=`<div class="card"><p>${esc(t.desc)}</p><p class="mu">Format: ${esc(fmtName())}. ${X.mode=='br'?'Tim dinilai dari poin posisi + poin kill.':'Double elimination: pemenang upper bracket lolos ke babak berikutnya; yang kalah turun ke lower bracket dan baru gugur setelah kalah dua kali.'}</p>${X.mode=='br'?'':btn}</div>${X.mode=='br'?brMain(1):gpOn()?'<h2>Grup</h2>'+gpMain(1):''}<h2>Klasemen & Hadiah</h2>${pz()}`;
