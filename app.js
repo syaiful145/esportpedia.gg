@@ -3,7 +3,7 @@
 // Sandi sekarang dicek di server (Environment Variable Vercel), bukan di file ini.
 let TOK='';try{TOK=sessionStorage.getItem('esptok')||''}catch(e){}
 const api=(u,o={})=>fetch(u,{...o,headers:{'Content-Type':'application/json',...(TOK?{Authorization:'Bearer '+TOK}:{})}});
-let PT=0;const push=()=>{clearTimeout(PT);PT=setTimeout(async()=>{try{const r=await api('/api/data',{method:'PUT',body:JSON.stringify(S)});if(r.ok){DIRTY=false;toast('Tersimpan ✓')}else toast(r.status==401?'Sesi habis, login admin lagi':'Gagal menyimpan ke server')}catch(e){toast('Gagal menyimpan ke server')}},800)};
+let PT=0;const push=()=>{clearTimeout(PT);PT=setTimeout(async()=>{try{const body=JSON.stringify(S);if(body===ORIG){DIRTY=false;return}const r=await api('/api/data',{method:'PUT',body});if(r.ok){ORIG=body;DIRTY=false;toast('Tersimpan ✓')}else toast(r.status==401?'Sesi habis, login admin lagi':'Gagal menyimpan ke server')}catch(e){toast('Gagal menyimpan ke server')}},4000)};
 // =====================================
 const COL=['#2563eb','#dc2626','#16a34a','#d97706','#7c3aed','#0891b2','#be185d','#475569'],ROLES=['Captain','Entry','Support','Flex','AWP'];
 const flag=c=>/^[A-Za-z]{2}$/.test(c||'')?[...c.toUpperCase()].map(h=>String.fromCodePoint(127397+h.charCodeAt(0))).join(''):'';
@@ -169,8 +169,6 @@ const busy=document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeE
 if(ADMIN&&DIRTY){if(DPEND?.etag!==etag){DPEND={text,etag};toast('Ada perubahan baru dari orang lain. Simpan dulu atau muat ulang halaman.')}return}
 if(busy){DPEND={text,etag};return}
 applyServerData(text,etag)}catch(e){}}
-setInterval(dataPoll,20000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)dataPoll()});
 
 function dropSess(){ADMIN=false;TOK='';VW='';PTK='';try{['esptok','espadmin','espviewer','esppt'].forEach(k=>sessionStorage.removeItem(k))}catch(e){}}
 // ---- tim peserta (diajukan peserta, disetujui admin)
@@ -249,6 +247,7 @@ function normT(t){
  if(t.mode=='br'&&!t.br)t.br=brDef();
  if(t.br){brClampWins(t.br);const b=t.br;b.pts=Array.isArray(b.pts)&&b.pts.length?b.pts.map(x=>+x||0):[12,9,8,7,6,5,4,3,2,1];b.kp=b.kp===''||b.kp==null||isNaN(+b.kp)?1:+b.kp;b.wp=b.wp===''||b.wp==null||isNaN(+b.wp)?0:Math.max(0,+b.wp);
   b.stages=Array.isArray(b.stages)&&b.stages.length?b.stages:[brStage('Penyisihan')];
+  b.stages.forEach(st=>{const seen=new Set();(st.gs||[]).forEach(g=>{g.t=(g.t||[]).filter(i=>{if(seen.has(i))return false;seen.add(i);return true})})});
   b.stages.forEach(s=>{s.id=s.id||'s'+uid();s.n=s.n||'Babak';s.mc=Math.max(1,Math.round(+s.mc)||1);s.adv=Math.max(0,+s.adv||0);s.el=s.el==null||s.el===''||isNaN(+s.el)?null:Math.max(0,Math.round(+s.el));s.gs=Array.isArray(s.gs)?s.gs:[];s.gs.forEach(g=>{g.t=Array.isArray(g.t)?g.t:[]});s.ms=Array.isArray(s.ms)?s.ms:[];s.ms.forEach(m=>{m.r=m.r&&typeof m.r=='object'?m.r:{};m.g=m.g||''});brEnsureM(s)})}
  if(t.gp){const g=t.gp;g.pool=Array.isArray(g.pool)?g.pool:[];g.gs=Array.isArray(g.gs)?g.gs:[];g.gs.forEach(x=>{x.t=Array.isArray(x.t)?x.t:[]});g.ms=Array.isArray(g.ms)?g.ms:[];g.adv=Math.max(1,+g.adv||2);g.ms.forEach(m=>{m.s=Array.isArray(m.s)?m.s:['','']})}}
 let VS={};
@@ -420,7 +419,7 @@ function brScoreUI(){const B=X.br,v=vs(),n=B.stages.length;if(v.as>=n)v.as=0;con
  if(!m)return h+'</div>';
  const st={};brStand(si,s.gs.length?v.ag:'').forEach(r=>{st[r.i]=r});
  const ps=teams.map(i=>brE(m.r[i]).p).filter(x=>x>0),dup=false,done=brPlayed(s,m,pool),last=si==n-1;
- if(gms.length>1)h+=segS(gms.map((x,k)=>[k,'Pertandingan '+(k+1)]),mi,'asPickM');
+ if(gms.length>1)h+=`<div class="seg" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">${gms.map((x,k)=>`<a class="${k==mi?'on':''}" onclick="asPickM(${k})">Pertandingan ${k+1}</a>`).join('')}</div>`;
  h+=`<div class="row" style="border:0;padding:0 0 8px;flex-wrap:wrap"><label class="mu" style="white-space:nowrap">Jumlah pertandingan${s.gs.length?' per grup':''} <input type="number" min="1" max="99" value="${s.mc}" onchange="brStg(${si},'mc',this.value)" style="width:80px"></label><span class="mu" style="flex:1;min-width:200px">Menang terisi <b>${brGrpWins(si,s.gs.length?v.ag:'')}</b> dari ${s.mc} pertandingan${s.gs.length?' di grup ini':''}. Isi <b>menang</b> dan <b>kill</b> dengan tombol − / +. Posisi dihitung otomatis: yang menang di urutan 1, lalu urut kill terbanyak. Poin: ${B.wp} per menang, ${B.kp} per kill${pt.some(x=>x>0)?', posisi '+pt.slice(0,5).join(', ')+(pt.length>5?', …':''):''}. Total terhitung otomatis.</span>${dInp(m.d,`brSet_d(${si},'${m.id}',this.value)`,'','width:140px')}</div>${dup?'<div class="note">Ada posisi yang sama dua kali.</div>':''}${done&&brGrpWins(si,s.gs.length?v.ag:'')!=s.mc?'<div class="note">Total menang '+brGrpWins(si,s.gs.length?v.ag:'')+' dari '+s.mc+' pertandingan. Pastikan sesuai.</div>':''}<div class="wrap"><table><tr><th>Tim</th><th>Posisi</th><th>Menang</th><th>Kill</th><th>Poin</th><th>Total</th><th>Hasil</th></tr>${teams.map(i=>{const rk=1+teams.filter(t=>(cum[t]||0)>(cum[i]||0)).length;const e=m.r[i]||['','',''],q=brPQ(m,i,pm),pp=q.has?brPP(q):'',tot=cum[i]!=null?cum[i]:'',r=st[i],hs=[done&&r&&r.rk==1?bd('Menang','ok'):'',done&&!last&&brOn(s)&&r?(r.rk<=brKeepN(s,r.gn)?bd('Lolos','ok'):bd('Eliminasi','live')):''].filter(Boolean).join(' ');return`<tr><td>${rk}. ${lg(i,20)} ${esc(S.teams[i].n)}</td><td><b>${q.p||'–'}</b></td><td>${brStpH(si,m.id,i,2,q.w,brCardWins(m)-q.w>=1)}</td><td>${brStpH(si,m.id,i,1,q.k,false)}</td><td>${pp}</td><td><b>${tot}</b></td><td>${hs}</td></tr>`}).join('')}</table></div></div>`;
  return h}
 function brSet_d(si,mid,v){const m=X.br.stages[si].ms.find(x=>x.id==mid);if(m){m.d=String(v).trim();save();render()}}
@@ -442,7 +441,7 @@ function home(){const fk=(()=>{const f=S.tours[S.feat||0];if(f&&inGM(f.g))return
  return`<div class="hero">${bd('● '+c.toUpperCase(),stc(c))}<h1 style="margin-top:8px">${esc(X.n)}</h1><p>${esc(cname(X.loc)||X.loc)} ${dFmt(X.date)?' · '+esc(dFmt(X.date)):''} · Total hadiah ${fmt(X.prize)}. ${esc(X.desc)}</p><a class="btn" onclick="go('/t/'+CUR)">Lihat pertandingan</a></div>
 <div class="stats"><div class="stat"><b>${X.size}</b><span>Tim bertanding</span></div><div class="stat"><b>${new Set(TI().map(([t,i])=>orgK(t.o)>=0?'o'+t.o:'t'+i)).size}</b><span>Tim terdaftar</span></div><div class="stat"><b>${mcount()}</b><span>Pertandingan</span></div><div class="stat"><b>${new Set(TI().map(([t])=>t.c)).size}</b><span>Negara</span></div></div>
 </div>
-<h2>Pertandingan</h2>${tcards(4)}<h2>Tim</h2>${tgrid()}
+<h2>Tim</h2>${tgrid()}
 <h2>Riwayat Pertandingan</h2><div class="wrap card" style="padding:0"><table><tr><th>Tahun</th><th>Pertandingan</th><th>Juara</th><th>Hadiah</th></tr>${S.hist.map(h=>{const i=S.teams.findIndex(t=>t.n==h[2]);return`<tr><td>${esc(h[0])}</td><td>${esc(h[1])}</td><td>${i>=0?tm(i,18):esc(h[2])}</td><td>${fmt(h[3])}</td></tr>`}).join('')}</table></div>`}
 function tour(){const c=champ(),t=X,s=sts();let b='';const btn='<button onclick="ofs()">⛶ Tampilkan full bracket</button>';
  if(X.mode=='br'&&(TAB=='bk'||TAB=='mt'))TAB='br';if(X.fm=='rr'&&(TAB=='bk'||TAB=='mt'))TAB='gp';if(X.mode!='br'&&TAB=='br')TAB='ov';if(TAB=='gp'&&!gpOn())TAB='ov';if(TAB=='ov')b=`<div class="card"><p>${esc(t.desc)}</p><p class="mu">Format: ${esc(fmtName())}. ${X.mode=='br'?'Tim dinilai dari poin posisi + poin kill.':'Double elimination: pemenang upper bracket lolos ke babak berikutnya; yang kalah turun ke lower bracket dan baru gugur setelah kalah dua kali.'}</p>${X.mode=='br'?'':btn}</div>${X.mode=='br'?brMain(1):gpOn()?'<h2>Grup</h2>'+gpMain(1):''}<h2>Klasemen & Hadiah</h2>${pz()}`;
@@ -739,10 +738,8 @@ async function pjPoll(){if(!ADMIN)return;try{const r=await api('/api/tim-admin')
  if(PJSNAP&&snap!==PJSNAP){const baru=pend-PJSCNT;if(baru>0)toast('Ada '+baru+' pengajuan/perubahan tim baru');PJ=rows;const busy=document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(!busy)render()}
  else{PJ=rows}
  PJSNAP=snap;PJSCNT=pend}catch(e){}}
-setInterval(pjPoll,30000);
 /* Peserta: My Team ikut berubah otomatis kalau admin menghapus/menyetujui pengajuan (cek tiap 20 detik) */
 let TMSNAP='';
 async function tmPoll(){if(!PTK||!VW||!TM.loaded||TM.loading||document.hidden)return;if(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
  try{const r=await fetch('/api/tim-saya',{cache:'no-store',headers:{Authorization:'Bearer '+PTK}});if(!r.ok)return;const j=await r.json().catch(()=>({}));const row=j.row||null;const snap=row?(row.id+'|'+row.status+'|'+row.updated_at+'|'+(row.live?'L':'')):'none';
   if(TMSNAP&&snap!==TMSNAP){TMSNAP=snap;loadTM();return}TMSNAP=snap}catch(e){}}
-setInterval(tmPoll,20000);
